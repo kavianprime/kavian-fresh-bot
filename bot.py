@@ -2,6 +2,7 @@ import requests
 import json
 import os
 import sys
+import random
 
 BOT_TOKEN = "8811972038:AAEupegBge-WDbG-D8G9nodoz1E8Nj7MYN0"
 CHAT_ID = "6128663089"
@@ -14,7 +15,7 @@ def load_memory():
                 return json.load(f)
         except:
             pass
-    return {'seen_urls': [], 'total_seen': 0, 'preferences': []}
+    return {'seen_urls': [], 'total_seen': 0}
 
 def save_memory(memory):
     with open(MEMORY_FILE, 'w', encoding='utf-8') as f:
@@ -24,29 +25,27 @@ def send_message(text, parse_mode='HTML'):
     url = f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage"
     requests.post(url, json={'chat_id': CHAT_ID, 'text': text, 'parse_mode': parse_mode})
 
-# بررسی دستورات (Commands)
+# بررسی دستورات
 if len(sys.argv) > 1:
     command = sys.argv[1]
-    
     if command == '/start':
-        send_message("🦁 <b>سلام رهبر کاویان!</b>\nمن KAVIAN PRIME هستم، دستیار هوشمند و خودمختار تو.\n\nدستورات موجود:\n/status : گزارش وضعیت حافظه و شکارها\n/find [keyword] : جستجوی دستی (به زودی)")
+        send_message("🦁 <b>سلام رهبر کاویان!</b>\nمن KAVIAN PRIME هستم.\n\nدستورات:\n/status : گزارش وضعیت\n/find : جستجوی فوری (به زودی)")
         sys.exit()
-        
     elif command == '/status':
         memory = load_memory()
         msg = f"📊 <b>گزارش وضعیت KAVIAN NEXUS:</b>\n\n"
-        msg += f"🧠 کل پروژه‌های دیده شده: {memory.get('total_seen', 0)}\n"
-        msg += f"💾 حجم حافظه: {len(memory.get('seen_urls', []))} لینک منحصر‌به‌فرد\n"
-        msg += f"⚡ وضعیت سیستم: <b>کاملاً پایدار و آنلاین ✅</b>"
+        msg += f"🧠 کل پروژه‌های بررسی شده: {memory.get('total_seen', 0)}\n"
+        msg += f"💾 حافظه: {len(memory.get('seen_urls', []))} لینک منحصر‌به‌فرد\n"
+        msg += f"⚡ وضعیت: <b>کاملاً پایدار و آنلاین ✅</b>"
         send_message(msg)
         sys.exit()
 
-# حالت پیش‌فرض: شکار روزانه (Daily Hunt)
-print("🦁 شکارچی هوشمند بیدار شد!")
+# حالت شکار روزانه
+print("🦁 شکارچی هوشمند با قابلیت امتیازدهی بیدار شد!")
 memory = load_memory()
 
 url = "https://www.arbeitnow.com/api/job-board-api"
-headers = {'User-Agent': 'KavianPrimeBot/1.0'}
+headers = {'User-Agent': 'KavianPrimeBot/2.0'}
 
 try:
     response = requests.get(url, headers=headers, timeout=15)
@@ -56,35 +55,45 @@ try:
     for job in data:
         title = job.get('title', '').lower()
         job_url = job.get('url', '')
-        if ('python' in title or 'ai' in title or 'bot' in title) and 'remote' in job.get('location', '').lower():
+        # فیلتر هوشمند: پایتون، هوش مصنوعی، ربات و دورکاری
+        if ('python' in title or 'ai' in title or 'bot' in title or 'developer' in title) and 'remote' in job.get('location', '').lower():
             if job_url not in memory['seen_urls']:
-                new_jobs.append({'title': job.get('title'), 'company': job.get('company_name', 'Unknown'), 'url': job_url})
+                
+                # 🧠 الگوریتم امتیازدهی هوشمند (Smart Scoring)
+                score = 70 # پایه امتیاز
+                if 'senior' in title or 'lead' in title: score += 15
+                if 'ai' in title or 'machine learning' in title: score += 10
+                if 'api' in title: score += 5
+                
+                new_jobs.append({
+                    'title': job.get('title'), 
+                    'company': job.get('company_name', 'Unknown'), 
+                    'url': job_url,
+                    'score': min(score, 99) # حداکثر 99
+                })
 
     if new_jobs:
-        msg = "💰 <b>پروژه‌های جدید شکار شد:</b>\n\n"
-        for i, job in enumerate(new_jobs[:3], 1):
-            msg += f"{i}. <b>{job['title']}</b>\n   🏢 {job['company']}\n   🔗 <a href='{job['url']}'>مشاهده لینک</a>\n\n"
+        # مرتب‌سازی بر اساس بالاترین امتیاز
+        new_jobs.sort(key=lambda x: x['score'], reverse=True)
         
-        # اضافه کردن دکمه‌های تعاملی (Inline Keyboard)
-        keyboard = {
-            "inline_keyboard": [
-                [{"text": "✅ ذخیره در حافظه", "callback_data": "save"},
-                 {"text": "❌ نادیده گرفتن", "callback_data": "ignore"}]
-            ]
-        }
+        msg = "💰 <b>شکارهای هوشمند امروز (مرتب‌شده بر اساس امتیاز):</b>\n\n"
+        for i, job in enumerate(new_jobs[:4], 1): # نمایش ۴ مورد برتر
+            # انتخاب ایموجی بر اساس امتیاز
+            emoji = "🔥" if job['score'] >= 90 else "⭐" if job['score'] >= 80 else "✅"
+            msg += f"{i}. {emoji} <b>{job['title']}</b> (امتیاز: {job['score']}٪)\n"
+            msg += f"   🏢 {job['company']}\n"
+            msg += f"   🔗 <a href='{job['url']}'>مشاهده و اقدام</a>\n\n"
         
-        requests.post(f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage", 
-                      json={'chat_id': CHAT_ID, 'text': msg, 'parse_mode': 'HTML', 'reply_markup': json.dumps(keyboard)})
-        print("✅ گزارش تعاملی ارسال شد.")
+        send_message(msg)
+        print(f"✅ {len(new_jobs)} پروژه جدید با امتیازدهی ارسال شد.")
         
         for job in new_jobs:
             memory['seen_urls'].append(job['url'])
         memory['total_seen'] = memory.get('total_seen', 0) + len(new_jobs)
         save_memory(memory)
     else:
-        print("⏸️ پروژه جدیدی نیست.")
-        # ارسال پیام وضعیت حتی اگر کاری نباشد، تا بدانی ربات زنده است
-        send_message("🧠 <b>گزارش روزانه:</b>\nامروز پروژه‌ی جدیدی مطابق معیارها یافت نشد. ربات در حالت آماده‌باش و اسکن مداوم است. ✅")
+        print("⏸️ پروژه جدیدی یافت نشد.")
+        send_message("🧠 <b>گزارش روزانه:</b>\nامروز شکار جدیدی با معیارهای بالا یافت نشد. ربات در حال اسکن مداوم است. ✅")
 
 except Exception as e:
     print(f"❌ خطا: {e}")
