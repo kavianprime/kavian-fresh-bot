@@ -2,7 +2,6 @@ import requests
 import json
 import os
 import sys
-import random
 
 BOT_TOKEN = "8811972038:AAEupegBge-WDbG-D8G9nodoz1E8Nj7MYN0"
 CHAT_ID = "6128663089"
@@ -41,11 +40,11 @@ if len(sys.argv) > 1:
         sys.exit()
 
 # حالت شکار روزانه
-print("🦁 شکارچی هوشمند با قابلیت امتیازدهی بیدار شد!")
+print("🦁 شکارچی هوشمند با مغز نویسنده بیدار شد!")
 memory = load_memory()
 
 url = "https://www.arbeitnow.com/api/job-board-api"
-headers = {'User-Agent': 'KavianPrimeBot/2.0'}
+headers = {'User-Agent': 'KavianPrimeBot/3.0'}
 
 try:
     response = requests.get(url, headers=headers, timeout=15)
@@ -55,12 +54,11 @@ try:
     for job in data:
         title = job.get('title', '').lower()
         job_url = job.get('url', '')
-        # فیلتر هوشمند: پایتون، هوش مصنوعی، ربات و دورکاری
         if ('python' in title or 'ai' in title or 'bot' in title or 'developer' in title) and 'remote' in job.get('location', '').lower():
             if job_url not in memory['seen_urls']:
                 
-                # 🧠 الگوریتم امتیازدهی هوشمند (Smart Scoring)
-                score = 70 # پایه امتیاز
+                # 🧠 الگوریتم امتیازدهی هوشمند
+                score = 70
                 if 'senior' in title or 'lead' in title: score += 15
                 if 'ai' in title or 'machine learning' in title: score += 10
                 if 'api' in title: score += 5
@@ -69,23 +67,27 @@ try:
                     'title': job.get('title'), 
                     'company': job.get('company_name', 'Unknown'), 
                     'url': job_url,
-                    'score': min(score, 99) # حداکثر 99
+                    'score': min(score, 99)
                 })
 
     if new_jobs:
-        # مرتب‌سازی بر اساس بالاترین امتیاز
         new_jobs.sort(key=lambda x: x['score'], reverse=True)
         
-        msg = "💰 <b>شکارهای هوشمند امروز (مرتب‌شده بر اساس امتیاز):</b>\n\n"
-        for i, job in enumerate(new_jobs[:4], 1): # نمایش ۴ مورد برتر
-            # انتخاب ایموجی بر اساس امتیاز
+        msg = "💰 <b>شکارهای هوشمند امروز:</b>\n\n"
+        for i, job in enumerate(new_jobs[:3], 1): 
             emoji = "🔥" if job['score'] >= 90 else "⭐" if job['score'] >= 80 else "✅"
             msg += f"{i}. {emoji} <b>{job['title']}</b> (امتیاز: {job['score']}٪)\n"
             msg += f"   🏢 {job['company']}\n"
-            msg += f"   🔗 <a href='{job['url']}'>مشاهده و اقدام</a>\n\n"
+            msg += f"   🔗 <a href='{job['url']}'>مشاهده لینک</a>\n\n"
+            
+            # ✨ ویژگی روز نهم: تولید خودکار متن پیشنهاد برای بهترین گزینه
+            if i == 1 and job['score'] >= 80:
+                msg += f"📝 <b>پیشنهاد آماده‌ی ارسال برای این پروژه:</b>\n"
+                msg += f"<i>سلام تیم {job['company']},\nمن توسعه‌دهنده‌ی متخصص در زمینه‌ی {job['title']} هستم. با توجه به نیازهای پروژه‌ی شما، آمادگی دارم راه‌حلی بهینه، مقیاس‌پذیر و با کیفیت بالا ارائه دهم. خوشحال می‌شوم در مورد جزئیات بیشتر گفتگو کنیم.</i>\n\n"
+                msg += "━━━━━━━━━━━━━━━━━━━━\n\n"
         
         send_message(msg)
-        print(f"✅ {len(new_jobs)} پروژه جدید با امتیازدهی ارسال شد.")
+        print(f"✅ {len(new_jobs)} پروژه جدید با پیشنهاد آماده ارسال شد.")
         
         for job in new_jobs:
             memory['seen_urls'].append(job['url'])
@@ -94,7 +96,6 @@ try:
     else:
         print("⏸️ پروژه جدیدی یافت نشد.")
         send_message("🧠 <b>گزارش روزانه:</b>\nامروز شکار جدیدی با معیارهای بالا یافت نشد. ربات در حال اسکن مداوم است. ✅")
-
-except Exception as e:
+        except Exception as e:
     print(f"❌ خطا: {e}")
     send_message(f"⚠️ <b>هشدار سیستم:</b>\nخطایی در اسکن رخ داد: {str(e)}")
