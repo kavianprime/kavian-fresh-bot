@@ -24,7 +24,6 @@ def send_message(text, parse_mode='HTML'):
     url = f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage"
     requests.post(url, json={'chat_id': CHAT_ID, 'text': text, 'parse_mode': parse_mode})
 
-# بررسی دستورات
 if len(sys.argv) > 1:
     command = sys.argv[1]
     if command == '/start':
@@ -39,7 +38,6 @@ if len(sys.argv) > 1:
         send_message(msg)
         sys.exit()
 
-# حالت شکار روزانه
 print("🦁 شکارچی هوشمند با مغز نویسنده بیدار شد!")
 memory = load_memory()
 
@@ -56,16 +54,17 @@ try:
         job_url = job.get('url', '')
         if ('python' in title or 'ai' in title or 'bot' in title or 'developer' in title) and 'remote' in job.get('location', '').lower():
             if job_url not in memory['seen_urls']:
-                
-                # 🧠 الگوریتم امتیازدهی هوشمند
                 score = 70
-                if 'senior' in title or 'lead' in title: score += 15
-                if 'ai' in title or 'machine learning' in title: score += 10
-                if 'api' in title: score += 5
+                if 'senior' in title or 'lead' in title:
+                    score += 15
+                if 'ai' in title or 'machine learning' in title:
+                    score += 10
+                if 'api' in title:
+                    score += 5
                 
                 new_jobs.append({
-                    'title': job.get('title'), 
-                    'company': job.get('company_name', 'Unknown'), 
+                    'title': job.get('title'),
+                    'company': job.get('company_name', 'Unknown'),
                     'url': job_url,
                     'score': min(score, 99)
                 })
@@ -74,16 +73,15 @@ try:
         new_jobs.sort(key=lambda x: x['score'], reverse=True)
         
         msg = "💰 <b>شکارهای هوشمند امروز:</b>\n\n"
-        for i, job in enumerate(new_jobs[:3], 1): 
+        for i, job in enumerate(new_jobs[:3], 1):
             emoji = "🔥" if job['score'] >= 90 else "⭐" if job['score'] >= 80 else "✅"
             msg += f"{i}. {emoji} <b>{job['title']}</b> (امتیاز: {job['score']}٪)\n"
             msg += f"   🏢 {job['company']}\n"
             msg += f"   🔗 <a href='{job['url']}'>مشاهده لینک</a>\n\n"
             
-            # ✨ ویژگی روز نهم: تولید خودکار متن پیشنهاد برای بهترین گزینه
             if i == 1 and job['score'] >= 80:
-                msg += f"📝 <b>پیشنهاد آماده‌ی ارسال برای این پروژه:</b>\n"
-                msg += f"<i>سلام تیم {job['company']},\nمن توسعه‌دهنده‌ی متخصص در زمینه‌ی {job['title']} هستم. با توجه به نیازهای پروژه‌ی شما، آمادگی دارم راه‌حلی بهینه، مقیاس‌پذیر و با کیفیت بالا ارائه دهم. خوشحال می‌شوم در مورد جزئیات بیشتر گفتگو کنیم.</i>\n\n"
+                msg += f"📝 <b>پیشنهاد آماده‌ی ارسال:</b>\n"
+                msg += f"<i>سلام تیم {job['company']}،\nمن توسعه‌دهنده‌ی متخصص در زمینه‌ی {job['title']} هستم. آمادگی دارم راه‌حلی بهینه و با کیفیت بالا ارائه دهم.</i>\n\n"
                 msg += "━━━━━━━━━━━━━━━━━━━━\n\n"
         
         send_message(msg)
@@ -95,7 +93,8 @@ try:
         save_memory(memory)
     else:
         print("⏸️ پروژه جدیدی یافت نشد.")
-        send_message("🧠 <b>گزارش روزانه:</b>\nامروز شکار جدیدی با معیارهای بالا یافت نشد. ربات در حال اسکن مداوم است. ✅")
-        except Exception as e:
+        send_message("🧠 <b>گزارش روزانه:</b>\nامروز شکار جدیدی یافت نشد. ربات در حال اسکن مداوم است. ✅")
+
+except Exception as e:
     print(f"❌ خطا: {e}")
     send_message(f"⚠️ <b>هشدار سیستم:</b>\nخطایی در اسکن رخ داد: {str(e)}")
