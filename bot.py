@@ -14,7 +14,13 @@ def load_memory():
                 return json.load(f)
         except:
             pass
-    return {'seen_urls': [], 'total_seen': 0, 'keywords': ['python', 'ai', 'bot', 'developer', 'engineer'], 'rejected_keywords': ['intern', 'junior']}
+    return {
+        'seen_urls': [], 
+        'total_seen': 0, 
+        'keywords': ['python', 'ai', 'bot', 'developer', 'engineer'], 
+        'rejected_keywords': ['intern', 'junior'],
+        'applications': []
+    }
 
 def save_memory(memory):
     with open(MEMORY_FILE, 'w', encoding='utf-8') as f:
@@ -30,23 +36,32 @@ def extract_skills(title, description):
     found = [skill for skill in skills_list if skill in text_to_check]
     if found:
         return "، ".join(list(dict.fromkeys(found))[:4]).title()
-    return "توسعه نرم‌افزار، حل مسئله"
+    return "توسعه نرم‌افزار"
 
 if len(sys.argv) > 1:
     command = sys.argv[1]
     memory = load_memory()
     keywords = memory.get('keywords', ['python', 'ai', 'bot', 'developer', 'engineer'])
     rejected = memory.get('rejected_keywords', ['intern', 'junior'])
+    applications = memory.get('applications', [])
     
     if command == '/start':
-        send_message("🦁 <b>سلام رهبر کاویان!</b>\nدستورات:\n/status\n/keywords\n/add [کلمه]\n/reject [کلمه]\n/remove [کلمه]\n/find [عبارت]")
+        msg = "🦁 <b>سلام رهبر کاویان!</b>\nدستورات:\n\n"
+        msg += "🔍 <b>شکار:</b>\n/find [عبارت]\n/keywords\n/add [کلمه]\n/reject [کلمه]\n/remove [کلمه]\n\n"
+        msg += "📊 <b>مدیریت درخواست‌ها:</b>\n/track : لیست درخواست‌ها\n/applied [شماره] : ارسال شد\n/interview [شماره] : مصاحبه\n/rejected [شماره] : رد شد\n/hired [شماره] : استخدام!"
+        send_message(msg)
         sys.exit()
+    
     elif command == '/status':
-        send_message(f"📊 کل: {memory.get('total_seen', 0)}\nحافظه: {len(memory.get('seen_urls', []))}")
+        active_apps = [a for a in applications if a['status'] in ['applied', 'interview']]
+        msg = f"📊 <b>وضعیت سیستم:</b>\nکل شکارها: {memory.get('total_seen', 0)}\nدرخواست‌های فعال: {len(active_apps)}\nاستخدامی‌ها: {len([a for a in applications if a['status'] == 'hired'])}"
+        send_message(msg)
         sys.exit()
+    
     elif command == '/keywords':
         send_message("🔑 " + "، ".join(keywords))
         sys.exit()
+    
     elif command.startswith('/add '):
         new_kw = command.split(' ', 1)[1].strip().lower()
         if new_kw and new_kw not in keywords:
@@ -55,6 +70,7 @@ if len(sys.argv) > 1:
             save_memory(memory)
             send_message(f"✅ {new_kw} اضافه شد!")
         sys.exit()
+    
     elif command.startswith('/reject '):
         bad_kw = command.split(' ', 1)[1].strip().lower()
         if bad_kw and bad_kw not in rejected:
@@ -63,6 +79,7 @@ if len(sys.argv) > 1:
             save_memory(memory)
             send_message(f"🚫 {bad_kw} به لیست سیاه اضافه شد!")
         sys.exit()
+    
     elif command.startswith('/remove '):
         rem_kw = command.split(' ', 1)[1].strip().lower()
         if rem_kw in rejected:
@@ -71,6 +88,53 @@ if len(sys.argv) > 1:
             save_memory(memory)
             send_message(f"✅ {rem_kw} حذف شد.")
         sys.exit()
+    
+    elif command == '/track':
+        if not applications:
+            send_message("📋 لیست درخواست‌های شما خالی است.\nاز دستور /find برای شروع استفاده کنید.")
+            sys.exit()
+        
+        status_emoji = {
+            'applied': '📤','interview': '🎤',
+            'rejected': '❌',
+            'hired': '🎉'
+        }
+        
+        report = "📋 <b>داشبورد درخواست‌های شما:</b>\n━━━━━━━━━━━━━━━━━━━━\n\n"
+        for i, app in enumerate(applications[-10:], 1):
+            emoji = status_emoji.get(app['status'], '📤')
+            report += f"{i}. {emoji} <b>{app['title']}</b>\n"
+            report += f"   🏢 {app['company']}\n"
+            report += f"   📅 {app['date']}\n\n"
+        
+        report += "━━━━━━━━━━━━━━━━━━━━\n"
+        report += "📤 ارسال شد | 🎤 مصاحبه | ❌ رد شد | 🎉 استخدام"
+        send_message(report)
+        sys.exit()
+    
+    elif command.startswith('/applied ') or command.startswith('/interview ') or command.startswith('/rejected ') or command.startswith('/hired '):
+        parts = command.split(' ', 1)
+        action = parts[0][1:]
+        try:
+            num = int(parts[1]) - 1
+            if 0 <= num < len(applications):
+                applications[num]['status'] = action
+                memory['applications'] = applications
+                save_memory(memory)
+                
+                status_text = {
+                    'applied': '📤 درخواست ارسال شد',
+                    'interview': '🎤 جلسه مصاحبه تنظیم شد',
+                    'rejected': '❌ درخواست رد شد',
+                    'hired': '🎉🔥 استخدام شدی! مبارک!'
+                }
+                send_message(f"✅ وضعیت <b>{applications[num]['title']}</b> به‌روز شد:\n{status_text.get(action, '')}")
+            else:
+                send_message("⚠️ شماره معتبر نیست.")
+        except:
+            send_message("⚠️ فرمت صحیح: /applied 1")
+        sys.exit()
+    
     elif command.startswith('/find '):
         query = command.split(' ', 1)[1].strip().lower()
         search_terms = query.split()
@@ -96,24 +160,36 @@ if len(sys.argv) > 1:
             all_new_jobs.sort(key=lambda x: x['score'], reverse=True)
             job = all_new_jobs[0]
             skills = extract_skills(job['title'], job['desc'])
-            report = "🔍 <b>گزارش جستجوی فوری:</b>\n━━━━━━━━━━━━━━━━━━━━\n"
+            
+            from datetime import datetime
+            today = datetime.now().strftime("%Y-%m-%d")
+            applications.append({
+                'title': job['title'],
+                'company': job['company'],
+                'url': job['url'],
+                'date': today,
+                'status': 'applied'
+            })
+            memory['applications'] = applications
+            save_memory(memory)
+            
+            report = "🔍 <b>گزارش جستجو + ثبت درخواست:</b>\n━━━━━━━━━━━━━━━━━━━━\n"
             report += f"💎 <b>الماس روز</b>\n"
             report += f"🔥 <b>{job['title']}</b>\n"
-            report += f"🏢 {job['company']}\n"
-            report += f"🛠️ <b>مهارت‌های کلیدی آگهی:</b> {skills}\n\n"
+            report += f"🏢 {job['company']}\n"report += f"🛠️ مهارت‌ها: {skills}\n\n"
             report += f"📝 <b>کاور لتر:</b>\n"
             report += f"<i>موضوع: درخواست همکاری برای {job['title']}\n\n"
             report += f"تیم محترم {job['company']}،\n\n"
             report += f"با سلام، با توجه به تطابق مهارت‌های من ({skills}) با نیازهای شما، علاقه‌مندی خود را اعلام می‌دارم.\n\n"
-            report += f"آمادگی دارم در جلسه آنلاین جزئیات بیشتری ارائه دهم.\n\n"
-            report += f"با سپاس.</i>\n\n"
-            report += f"🔗 <a href='{job['url']}'>مشاهده و اقدام</a>\n"
+            report += f"آمادگی دارم در جلسه آنلاین جزئیات بیشتری ارائه دهم.\n\nبا سپاس.</i>\n\n"
+            report += f"🔗 <a href='{job['url']}'>مشاهده</a>\n\n"
+            report += "✅ <b>این پروژه به لیست درخواست‌های شما اضافه شد!</b>"
             send_message(report)
         else:
             send_message("❌ موردی یافت نشد.")
         sys.exit()
 
-print("🦁 شکارچی با تحلیلگر مهارت بیدار شد!")
+print("🦁 شکارچی با مدیریت درخواست‌ها بیدار شد!")
 memory = load_memory()
 all_new_jobs = []
 keywords = memory.get('keywords', ['python', 'ai', 'bot', 'developer', 'engineer'])
@@ -155,15 +231,12 @@ if len(all_new_jobs) > 0:
     report += f"💎 <b>الماس روز</b>\n"
     report += f"🔥 <b>{job['title']}</b>\n"
     report += f"🏢 {job['company']}\n"
-    report += f"🛠️ <b>مهارت‌های کلیدی آگهی:</b> {skills}\n\n"
-    
+    report += f"🛠️ مهارت‌ها: {skills}\n\n"
     report += f"📝 <b>کاور لتر:</b>\n"
     report += f"<i>موضوع: درخواست همکاری برای {job['title']}\n\n"
     report += f"تیم محترم {job['company']}،\n\n"
     report += f"با سلام، با توجه به تطابق مهارت‌های من ({skills}) با نیازهای شما، علاقه‌مندی خود را اعلام می‌دارم.\n\n"
-    report += f"آمادگی دارم در جلسه آنلاین جزئیات بیشتری ارائه دهم.\n\n"
-    report += f"با سپاس.</i>\n\n"
-    
+    report += f"آمادگی دارم در جلسه آنلاین جزئیات بیشتری ارائه دهم.\n\nبا سپاس.</i>\n\n"
     report += f"🔗 <a href='{job['url']}'>مشاهده و اقدام</a>\n\n"
     report += "━━━━━━━━━━━━━━━━━━━━\n"
     report += "<b>سایر گزینه‌ها:</b>\n"
@@ -179,6 +252,6 @@ if len(all_new_jobs) > 0:
         memory['seen_urls'].append(j['url'])
     memory['total_seen'] = memory.get('total_seen', 0) + len(all_new_jobs)
     save_memory(memory)
-    print(f"✅ گزارش با تحلیل مهارت ارسال شد.")
+    print(f"✅ گزارش ارسال شد.")
 else:
     send_message("⏸️ پروژه جدیدی نیست.")
