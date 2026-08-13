@@ -28,43 +28,49 @@ def send_message(text):
 if len(sys.argv) > 1:
     command = sys.argv[1]
     memory = load_memory()
-    keywords = memory.get('keywords', ['python', 'ai', 'bot', 'developer', 'engineer'])
-    rejected = memory.get('rejected_keywords', ['intern', 'junior'])
-    applications = memory.get('applications', [])
     
     if command == '/start':
-        send_message("🦁 <b>سلام!</b>\nدستورات:\n/find [عبارت]\n/track : لیست درخواست‌ها\n/applied [شماره]\n/interview [شماره]\n/rejected [شماره]\n/hired [شماره]")
-        sys.exit()
-    
-    elif command == '/status':
-        send_message(f"📊 کل: {memory.get('total_seen', 0)}\nدرخواست‌ها: {len(applications)}")
+        send_message("🦁 <b>سلام!</b>\nدستورات:\n/find [عبارت]\n/track : لیست درخواست‌ها\n/applied [شماره]\n/hired [شماره]")
         sys.exit()
     
     elif command == '/track':
-        if not applications:
+        apps = memory.get('applications', [])
+        if not apps:
             send_message("📋 لیست خالی است.")
             sys.exit()
         report = "📋 <b>درخواست‌های شما:</b>\n"
-        for i, app in enumerate(applications[-5:], 1):
+        for i, app in enumerate(apps[-5:], 1):
             report += f"{i}. {app['title']} - {app['status']}\n"
         send_message(report)
         sys.exit()
     
-    elif command.startswith('/applied ') or command.startswith('/interview ') or command.startswith('/rejected ') or command.startswith('/hired '):
-        parts = command.split(' ', 1)
-        action = parts[0][1:]
+    elif command.startswith('/applied '):
         try:
-            num = int(parts[1]) - 1
-            if 0 <= num < len(applications):
-                applications[num]['status'] = action
-                memory['applications'] = applications
+            num = int(command.split(' ')[1]) - 1
+            apps = memory.get('applications', [])
+            if 0 <= num < len(apps):
+                apps[num]['status'] = 'applied'
+                memory['applications'] = apps
                 save_memory(memory)
-                send_message(f"✅ وضعیت به‌روز شد: {action}")
-            else:
-                send_message("⚠️ شماره معتبر نیست.")
+                send_message(f"✅ به‌روز شد: {apps[num]['title']}")
+            sys.exit()
         except:
             send_message("⚠️ فرمت: /applied 1")
-        sys.exit()
+            sys.exit()
+    
+    elif command.startswith('/hired '):
+        try:
+            num = int(command.split(' ')[1]) - 1
+            apps = memory.get('applications', [])
+            if 0 <= num < len(apps):
+                apps[num]['status'] = 'hired'
+                memory['applications'] = apps
+                save_memory(memory)
+                send_message(f"🎉 استخدام شدی: {apps[num]['title']}")
+            sys.exit()
+        except:
+            send_message("⚠️ فرمت: /hired 1")
+            sys.exit()
     
     elif command.startswith('/find '):
         query = command.split(' ', 1)[1].strip().lower()
@@ -75,24 +81,16 @@ if len(sys.argv) > 1:
             for job in r1.json().get('data', []):
                 title = job.get('title', '').lower()
                 if any(k in title for k in search_terms) and 'remote' in job.get('location', '').lower():
-                    if not any(bad in title for bad in rejected):
-                        all_new_jobs.append({'title': job.get('title'), 'company': job.get('company_name'), 'url': job.get('url')})
-        except:
-            pass
-        try:
-            r2 = requests.get("https://remotive.com/api/remote-jobs", timeout=15)
-            for job in r2.json().get('jobs', []):
-                title = job.get('title', '').lower()
-                if any(k in title for k in search_terms):
-                    if not any(bad in title for bad in rejected):
-                        all_new_jobs.append({'title': job.get('title'), 'company': job.get('company_name'), 'url': job.get('url')})
+                    all_new_jobs.append({'title': job.get('title'), 'company': job.get('company_name'), 'url': job.get('url')})
         except:
             pass
         
-        if len(all_new_jobs) > 0:job = all_new_jobs[0]
+        if len(all_new_jobs) > 0:
+            job = all_new_jobs[0]
             today = datetime.now().strftime("%Y-%m-%d")
-            applications.append({'title': job['title'], 'company': job['company'], 'url': job['url'], 'date': today, 'status': 'applied'})
-            memory['applications'] = applications
+            apps = memory.get('applications', [])
+            apps.append({'title': job['title'], 'company': job['company'], 'url': job['url'], 'date': today, 'status': 'applied'})
+            memory['applications'] = apps
             save_memory(memory)
             
             report = f"💎 <b>{job['title']}</b>\n🏢 {job['company']}\n🔗 <a href='{job['url']}'>مشاهده</a>\n\n✅ به لیست درخواست‌ها اضافه شد!"
@@ -105,27 +103,13 @@ print("🦁 شکارچی بیدار شد!")
 memory = load_memory()
 all_new_jobs = []
 keywords = memory.get('keywords', ['python', 'ai', 'bot', 'developer', 'engineer'])
-rejected = memory.get('rejected_keywords', ['intern', 'junior'])
-
 try:
     r1 = requests.get("https://www.arbeitnow.com/api/job-board-api", timeout=15)
     for job in r1.json().get('data', []):
         title = job.get('title', '').lower()
         if any(k in title for k in keywords) and 'remote' in job.get('location', '').lower():
-            if not any(bad in title for bad in rejected):
-                if job.get('url') not in memory['seen_urls']:
-                    all_new_jobs.append({'title': job.get('title'), 'company': job.get('company_name'), 'url': job.get('url')})
-except:
-    pass
-
-try:
-    r2 = requests.get("https://remotive.com/api/remote-jobs", timeout=15)
-    for job in r2.json().get('jobs', []):
-        title = job.get('title', '').lower()
-        if any(k in title for k in keywords):
-            if not any(bad in title for bad in rejected):
-                if job.get('url') not in memory['seen_urls']:
-                    all_new_jobs.append({'title': job.get('title'), 'company': job.get('company_name'), 'url': job.get('url')})
+            if job.get('url') not in memory['seen_urls']:
+                all_new_jobs.append({'title': job.get('title'), 'company': job.get('company_name'), 'url': job.get('url')})
 except:
     pass
 
