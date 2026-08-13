@@ -45,6 +45,7 @@ keywords = ['python', 'ai', 'bot', 'developer', 'engineer']
 
 # منبع اول: Arbeitnow
 try:
+    print("اسکن منبع اول: Arbeitnow...")
     response1 = requests.get("https://www.arbeitnow.com/api/job-board-api", headers={'User-Agent': 'KavianPrimeBot/4.0'}, timeout=15)
     data1 = response1.json().get('data', [])
     for job in data1:
@@ -57,12 +58,19 @@ try:
                     score += 15
                 if 'ai' in title or 'machine learning' in title:
                     score += 10
-                all_new_jobs.append({'title': job.get('title'), 'company': job.get('company_name', 'Unknown'), 'url': job_url, 'score': min(score, 99)})
+                all_new_jobs.append({
+                    'title': job.get('title'),
+                    'company': job.get('company_name', 'Unknown'),
+                    'url': job_url,
+                    'score': min(score, 99)
+                })
+    print(f"✅ {len(all_new_jobs)} پروژه از Arbeitnow یافت شد")
 except Exception as e:
-    print(f"خطا در منبع اول: {e}")
+    print(f"⚠️ خطا در منبع اول: {e}")
 
 # منبع دوم: Remotive
 try:
+    print("اسکن منبع دوم: Remotive...")
     response2 = requests.get("https://remotive.com/api/remote-jobs", headers={'User-Agent': 'KavianPrimeBot/4.0'}, timeout=15)
     data2 = response2.json().get('jobs', [])
     for job in data2:
@@ -75,9 +83,15 @@ try:
                     score += 15
                 if 'ai' in title or 'machine learning' in title:
                     score += 10
-                all_new_jobs.append({'title': job.get('title'), 'company': job.get('company_name', 'Unknown'), 'url': job_url, 'score': min(score, 99)})
+                all_new_jobs.append({
+                    'title': job.get('title'),
+                    'company': job.get('company_name', 'Unknown'),
+                    'url': job_url,
+                    'score': min(score, 99)
+                })
+    print(f"✅ مجموعاً {len(all_new_jobs)} پروژه از هر دو منبع یافت شد")
 except Exception as e:
-    print(f"خطا در منبع دوم: {e}")
+    print(f"⚠️ خطا در منبع دوم: {e}")
 
 if all_new_jobs:
     all_new_jobs.sort(key=lambda x: x['score'], reverse=True)
@@ -90,7 +104,8 @@ if all_new_jobs:
         
         if i == 1 and job['score'] >= 80:
             msg += f"📝 <b>پیشنهاد آماده:</b>\n"
-            msg += f"<i>سلام تیم {job['company']}،\nمن متخصص {job['title']} هستم. آمادگی دارم راه‌حل بهینه ارائه دهم.</i>\n\n"msg += "━━━━━━━━━━━━━━━━━━━━\n\n"
+            msg += f"<i>سلام تیم {job['company']}،\nمن متخصص {job['title']} هستم. آمادگی دارم راه‌حل بهینه ارائه دهم.</i>\n\n"
+            msg += "━━━━━━━━━━━━━━━━━━━━\n\n"
     
     send_message(msg)
     print(f"✅ {len(all_new_jobs)} پروژه از ۲ منبع ارسال شد.")
