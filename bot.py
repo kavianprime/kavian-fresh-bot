@@ -14,7 +14,12 @@ def load_memory():
                 return json.load(f)
         except:
             pass
-    return {'seen_urls': [], 'total_seen': 0, 'keywords': ['python', 'ai', 'bot', 'developer', 'engineer']}
+    return {
+        'seen_urls': [], 
+        'total_seen': 0,
+        'keywords': ['python', 'ai', 'bot', 'developer', 'engineer'],
+        'rejected_keywords': ['intern', 'junior']
+    }
 
 def save_memory(memory):
     with open(MEMORY_FILE, 'w', encoding='utf-8') as f:
@@ -38,8 +43,10 @@ if len(sys.argv) > 1:
         msg = "🦁 <b>سلام رهبر کاویان!</b>\nمن KAVIAN PRIME هستم.\n\n"
         msg += "دستورات:\n"
         msg += "/status : گزارش وضعیت\n"
-        msg += "/keywords : نمایش کلمات کلیدی\n"
-        msg += "/add [کلمه] : افزودن کلمه جدید"
+        msg += "/keywords : کلمات کلیدی فعال\n"
+        msg += "/add [کلمه] : افزودن به شکار\n"
+        msg += "/reject [کلمه] : افزودن به لیست سیاه (رد خودکار)\n"
+        msg += "/remove [کلمه] : حذف از لیست سیاه"
         send_message(msg)
         sys.exit()
     
@@ -53,8 +60,7 @@ if len(sys.argv) > 1:
     
     elif command == '/keywords':
         kws = memory.get('keywords', [])
-        kws_text = "، ".join(kws)
-        send_message(f"🔑 <b>کلمات کلیدی فعال:</b>\n\n{kws_text}")
+        send_message(f"🔑 <b>کلمات کلیدی فعال:</b>\n\n" + "، ".join(kws))
         sys.exit()
     
     elif command.startswith('/add '):
@@ -64,48 +70,74 @@ if len(sys.argv) > 1:
             keywords_list.append(new_kw)
             memory['keywords'] = keywords_list
             save_memory(memory)
-            send_message(f"✅ کلمه‌ی <b>{new_kw}</b> اضافه شد!")
+            send_message(f"✅ کلمه‌ی <b>{new_kw}</b> به لیست شکار اضافه شد!")
         else:
             send_message("⚠️ این کلمه از قبل وجود دارد.")
         sys.exit()
 
-print("🦁 شکارچی هوشمند و یادگیرنده بیدار شد!")
+    elif command.startswith('/reject '):
+        bad_kw = command.split(' ', 1)[1].strip().lower()
+        rejected_list = memory.get('rejected_keywords', [])
+        if bad_kw and bad_kw not in rejected_list:
+            rejected_list.append(bad_kw)
+            memory['rejected_keywords'] = rejected_list
+            save_memory(memory)
+            send_message(f"🚫 کلمه‌ی <b>{bad_kw}</b> به لیست سیاه اضافه شد. ربات دیگر این موارد را نشان نمی‌دهد!")
+        else:
+            send_message("⚠️ این کلمه از قبل در لیست سیاه است.")
+        sys.exit()
+
+    elif command.startswith('/remove '):
+        rem_kw = command.split(' ', 1)[1].strip().lower()
+        rejected_list = memory.get('rejected_keywords', [])
+        if rem_kw in rejected_list:
+            rejected_list.remove(rem_kw)
+            memory['rejected_keywords'] = rejected_list
+            save_memory(memory)
+            send_message(f"✅ کلمه‌ی <b>{rem_kw}</b> از لیست سیاه حذف شد.")
+        else:
+            send_message("⚠️ این کلمه در لیست سیاه نبود.")
+        sys.exit()
+
+print("🦁 شکارچی هوشمند با فیلتر منفی بیدار شد!")
 memory = load_memory()
 all_new_jobs = []
 keywords = memory.get('keywords', ['python', 'ai', 'bot', 'developer', 'engineer'])
-
+rejected = memory.get('rejected_keywords', ['intern', 'junior'])
 try:
     print("اسکن منبع اول...")
-    response1 = requests.get("https://www.arbeitnow.com/api/job-board-api", headers={'User-Agent': 'KavianPrimeBot/7.0'}, timeout=15)
+    response1 = requests.get("https://www.arbeitnow.com/api/job-board-api", headers={'User-Agent': 'KavianPrimeBot/8.0'}, timeout=15)
     data1 = response1.json().get('data', [])
     for job in data1:
         title = job.get('title', '').lower()
         job_url = job.get('url', '')
         if any(k in title for k in keywords) and 'remote' in job.get('location', '').lower():
-            if job_url not in memory['seen_urls']:
-                score = 70
-                if 'senior' in title or 'lead' in title: score += 15
-                if 'ai' in title or 'machine learning' in title: score += 10
-                all_new_jobs.append({'title': job.get('title'), 'company': job.get('company_name', 'Unknown'), 'url': job_url, 'score': min(score, 99), 'perks': ''})
+            if not any(bad in title for bad in rejected):
+                if job_url not in memory['seen_urls']:
+                    score = 70
+                    if 'senior' in title or 'lead' in title: score += 15
+                    if 'ai' in title or 'machine learning' in title: score += 10
+                    all_new_jobs.append({'title': job.get('title'), 'company': job.get('company_name', 'Unknown'), 'url': job_url, 'score': min(score, 99), 'perks': ''})
     print("✅ منبع اول تکمیل شد")
 except Exception as e:
     print(f"⚠️ خطا در منبع اول: {e}")
 
 try:
     print("اسکن منبع دوم...")
-    response2 = requests.get("https://remotive.com/api/remote-jobs", headers={'User-Agent': 'KavianPrimeBot/7.0'}, timeout=15)
+    response2 = requests.get("https://remotive.com/api/remote-jobs", headers={'User-Agent': 'KavianPrimeBot/8.0'}, timeout=15)
     data2 = response2.json().get('jobs', [])
     for job in data2:
         title = job.get('title', '').lower()
         job_url = job.get('url', '')
         if any(k in title for k in keywords):
-            if job_url not in memory['seen_urls']:
-                score = 70
-                if 'senior' in title or 'lead' in title: score += 15
-                if 'ai' in title or 'machine learning' in title: score += 10
-                salary = job.get('salary', '')
-                perks = f"💰 {salary}" if salary else "💼 دورکاری"
-                all_new_jobs.append({'title': job.get('title'), 'company': job.get('company_name', 'Unknown'), 'url': job_url, 'score': min(score, 99), 'perks': perks})
+            if not any(bad in title for bad in rejected):
+                if job_url not in memory['seen_urls']:
+                    score = 70
+                    if 'senior' in title or 'lead' in title: score += 15
+                    if 'ai' in title or 'machine learning' in title: score += 10
+                    salary = job.get('salary', '')
+                    perks = f"💰 {salary}" if salary else "💼 دورکاری"
+                    all_new_jobs.append({'title': job.get('title'), 'company': job.get('company_name', 'Unknown'), 'url': job_url, 'score': min(score, 99), 'perks': perks})
     print("✅ منبع دوم تکمیل شد")
 except Exception as e:
     print(f"⚠️ خطا در منبع دوم: {e}")
