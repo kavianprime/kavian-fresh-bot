@@ -30,7 +30,7 @@ if len(sys.argv) > 1:
     memory = load_memory()
     
     if command == '/start':
-        send_message("🦁 <b>سلام!</b>\nدستورات:\n/find [عبارت]\n/track : لیست درخواست‌ها\n/applied [شماره]\n/hired [شماره]")
+        send_message("🦁 <b>سلام رهبر کاویان!</b>\nدستورات:\n/find [عبارت]\n/track : لیست درخواست‌ها\n/applied [شماره]\n/hired [شماره]")
         sys.exit()
     
     elif command == '/track':
@@ -99,10 +99,28 @@ if len(sys.argv) > 1:
             send_message("❌ موردی یافت نشد.")
         sys.exit()
 
-print("🦁 شکارچی بیدار شد!")
+print("🦁 شکارچی و منشی پیگیر بیدار شد!")
 memory = load_memory()
 all_new_jobs = []
 keywords = memory.get('keywords', ['python', 'ai', 'bot', 'developer', 'engineer'])
+# بخش جدید: بررسی یادآورهای پیگیری (Follow-up Reminders)
+apps = memory.get('applications', [])
+today_date = datetime.now().date()
+for app in apps:
+    if app['status'] == 'applied':
+        try:
+            app_date = datetime.strptime(app['date'], "%Y-%m-%d").date()
+            if (today_date - app_date).days == 3:
+                follow_msg = f"⏰ <b>یادآور هوشمند پیگیری:</b>\n\n"
+                follow_msg += f"رهبر کاویان، ۳ روز از درخواست تو به <b>{app['company']}</b> گذشت.\n\n"
+                follow_msg += f"📝 <b>متن پیگیری آماده:</b>\n"
+                follow_msg += f"<i>موضوع: پیگیری درخواست - {app['title']}\n\n"
+                follow_msg += f"تیم محترم {app['company']}،\nپیرو درخواست قبلی‌ام، خواستم مجدداً علاقه‌مندی‌ام را اعلام کنم. آیا فرصتی برای گفتگو وجود دارد؟\nبا سپاس.</i>"
+                send_message(follow_msg)
+        except:
+            pass
+
+# بخش شکار روزانه
 try:
     r1 = requests.get("https://www.arbeitnow.com/api/job-board-api", timeout=15)
     for job in r1.json().get('data', []):
