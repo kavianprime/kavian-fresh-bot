@@ -9,11 +9,8 @@ MEMORY_FILE = "kavian_memory.json"
 
 def load_memory():
     if os.path.exists(MEMORY_FILE):
-        try:
-            with open(MEMORY_FILE, 'r', encoding='utf-8') as f:
-                return json.load(f)
-        except:
-            pass
+        with open(MEMORY_FILE, 'r', encoding='utf-8') as f:
+            return json.load(f)
     return {'seen_urls': [], 'total_seen': 0, 'keywords': ['python', 'ai', 'bot', 'developer', 'engineer'], 'rejected_keywords': ['intern', 'junior']}
 
 def save_memory(memory):
@@ -37,12 +34,11 @@ if len(sys.argv) > 1:
     rejected = memory.get('rejected_keywords', ['intern', 'junior'])
     
     if command == '/start':
-        send_message("🦁 <b>سلام رهبر کاویان!</b>\nدستورات:\n/status\n/keywords\n/add [کلمه]\n/reject [کلمه]\n/remove [کلمه]\n/find [عبارت]")
+        send_message("🦁 <b>سلام!</b>\nدستورات:\n/status\n/keywords\n/add [کلمه]\n/reject [کلمه]\n/remove [کلمه]\n/find [عبارت]")
         sys.exit()
     
     elif command == '/status':
-        msg = f"📊 <b>وضعیت:</b>\nکل: {memory.get('total_seen', 0)}\nحافظه: {len(memory.get('seen_urls', []))}"
-        send_message(msg)
+        send_message(f"📊 کل: {memory.get('total_seen', 0)}\nحافظه: {len(memory.get('seen_urls', []))}")
         sys.exit()
     
     elif command == '/keywords':
@@ -91,7 +87,8 @@ if len(sys.argv) > 1:
         data2 = response2.json().get('jobs', [])
         for job in data2:
             title = job.get('title', '').lower()
-            if any(k in title for k in search_terms):if not any(bad in title for bad in rejected):
+            if any(k in title for k in search_terms):
+                if not any(bad in title for bad in rejected):
                     all_new_jobs.append({'title': job.get('title'), 'company': job.get('company_name'), 'url': job.get('url')})
         if len(all_new_jobs) > 0:
             send_message("🔍 <b>نتایج جستجو:</b>")
