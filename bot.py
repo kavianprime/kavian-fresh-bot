@@ -14,11 +14,7 @@ def load_memory():
                 return json.load(f)
         except:
             pass
-    return {
-        'seen_urls': [], 
-        'total_seen': 0,
-        'keywords': ['python', 'ai', 'bot', 'developer', 'engineer']
-    }
+    return {'seen_urls': [], 'total_seen': 0, 'keywords': ['python', 'ai', 'bot', 'developer', 'engineer']}
 
 def save_memory(memory):
     with open(MEMORY_FILE, 'w', encoding='utf-8') as f:
@@ -27,19 +23,13 @@ def save_memory(memory):
 def send_message_with_button(text, url, parse_mode='HTML'):
     api_url = f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage"
     keyboard = {"inline_keyboard": [[{"text": "🔗 مشاهده و اقدام سریع", "url": url}]]}
-    payload = {
-        'chat_id': CHAT_ID,
-        'text': text,
-        'parse_mode': parse_mode,
-        'reply_markup': json.dumps(keyboard)
-    }
+    payload = {'chat_id': CHAT_ID, 'text': text, 'parse_mode': parse_mode, 'reply_markup': json.dumps(keyboard)}
     requests.post(api_url, json=payload)
 
 def send_message(text, parse_mode='HTML'):
     api_url = f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage"
     requests.post(api_url, json={'chat_id': CHAT_ID, 'text': text, 'parse_mode': parse_mode})
 
-# مدیریت دستورات هوشمند
 if len(sys.argv) > 1:
     command = sys.argv[1]
     memory = load_memory()
@@ -48,11 +38,11 @@ if len(sys.argv) > 1:
         msg = "🦁 <b>سلام رهبر کاویان!</b>\nمن KAVIAN PRIME هستم.\n\n"
         msg += "دستورات:\n"
         msg += "/status : گزارش وضعیت\n"
-        msg += "/keywords : نمایش کلمات کلیدی فعلی\n"
-        msg += "/add [کلمه] : افزودن کلمه جدید به شکار (مثال: /add rust)"
+        msg += "/keywords : نمایش کلمات کلیدی\n"
+        msg += "/add [کلمه] : افزودن کلمه جدید"
         send_message(msg)
         sys.exit()
-        
+    
     elif command == '/status':
         msg = "📊 <b>گزارش وضعیت:</b>\n\n"
         msg += f"🧠 کل پروژه‌ها: {memory.get('total_seen', 0)}\n"
@@ -60,21 +50,23 @@ if len(sys.argv) > 1:
         msg += f"⚡ وضعیت: <b>آنلاین ✅</b>"
         send_message(msg)
         sys.exit()
-        
+    
     elif command == '/keywords':
         kws = memory.get('keywords', [])
-        kws_text = "، ".join([f"<code>{k}</code>" for k in kws])
-        send_message(f"🔑 <b>کلمات کلیدی فعال:</b>\n\n{kws_text}\n\nبرای افزودن کلمه جدید از دستور <code>/add [کلمه]</code> استفاده کن.")
+        kws_text = "، ".join(kws)
+        send_message(f"🔑 <b>کلمات کلیدی فعال:</b>\n\n{kws_text}")
         sys.exit()
-        
+    
     elif command.startswith('/add '):
         new_kw = command.split(' ', 1)[1].strip().lower()
-        if new_kw and new_kw not in memory.get('keywords', []):
-            memory['keywords'].append(new_kw)
+        keywords_list = memory.get('keywords', [])
+        if new_kw and new_kw not in keywords_list:
+            keywords_list.append(new_kw)
+            memory['keywords'] = keywords_list
             save_memory(memory)
-            send_message(f"✅ کلمه‌ی <b>{new_kw}</b> با موفقیت به لیست شکار اضافه شد!\nاز دفعه‌ی بعد ربات این کلمه را هم جستجو می‌کند.")
+            send_message(f"✅ کلمه‌ی <b>{new_kw}</b> اضافه شد!")
         else:
-            send_message("⚠️ این کلمه از قبل در لیست وجود دارد یا نامعتبر است.")
+            send_message("⚠️ این کلمه از قبل وجود دارد.")
         sys.exit()
 
 print("🦁 شکارچی هوشمند و یادگیرنده بیدار شد!")
@@ -98,7 +90,8 @@ try:
     print("✅ منبع اول تکمیل شد")
 except Exception as e:
     print(f"⚠️ خطا در منبع اول: {e}")
-    try:
+
+try:
     print("اسکن منبع دوم...")
     response2 = requests.get("https://remotive.com/api/remote-jobs", headers={'User-Agent': 'KavianPrimeBot/7.0'}, timeout=15)
     data2 = response2.json().get('jobs', [])
@@ -119,7 +112,6 @@ except Exception as e:
 
 if len(all_new_jobs) > 0:
     all_new_jobs.sort(key=lambda x: x['score'], reverse=True)
-    
     for i, job in enumerate(all_new_jobs[:4], 1):
         emoji = "🚨" if job['score'] >= 90 else "🔥" if job['score'] >= 80 else "✅"
         msg = f"{i}. {emoji} <b>{job['title']}</b> (امتیاز: {job['score']}٪)\n"
@@ -127,19 +119,15 @@ if len(all_new_jobs) > 0:
         perks_text = job.get('perks', '')
         if perks_text != '':
             msg += f"   🎁 {perks_text}\n"
-        
         if i == 1 and job['score'] >= 80:
-            msg += f"\n📝 <b>پیشنهاد آماده‌ی ارسال:</b>\n"
-            msg += f"<i>سلام تیم {job['company']}،\nمن متخصص {job['title']} هستم. آمادگی دارم راه‌حلی بهینه و با کیفیت بالا ارائه دهم.</i>\n"
+            msg += f"\n📝 <b>پیشنهاد آماده:</b>\n<i>سلام تیم {job['company']}،\nمن متخصص {job['title']} هستم. آمادگی دارم راه‌حل بهینه ارائه دهم.</i>\n"
             msg += "━━━━━━━━━━━━━━━━━━━━"
-        
         send_message_with_button(msg, job['url'])
-        
-    print(f"✅ {len(all_new_jobs[:4])} پروژه با دکمه ارسال شد.")
+    print(f"✅ {len(all_new_jobs[:4])} پروژه ارسال شد.")
     for job in all_new_jobs:
         memory['seen_urls'].append(job['url'])
     memory['total_seen'] = memory.get('total_seen', 0) + len(all_new_jobs)
     save_memory(memory)
 else:
     print("⏸️ پروژه جدیدی نیست.")
-    send_message("🧠 <b>گزارش:</b>\nامروز شکار جدیدی یافت نشد. ربات در حال اسکن مداوم است. ✅")
+    send_message("🧠 <b>گزارش:</b>\nامروز شکار جدیدی یافت نشد. ✅")
