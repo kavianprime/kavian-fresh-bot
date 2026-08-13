@@ -31,7 +31,7 @@ if len(sys.argv) > 1:
         sys.exit()
     elif command == '/status':
         memory = load_memory()
-        msg = f"📊 <b>گزارش وضعیت:</b>\n\n"
+        msg = "📊 <b>گزارش وضعیت:</b>\n\n"
         msg += f"🧠 کل پروژه‌ها: {memory.get('total_seen', 0)}\n"
         msg += f"💾 حافظه: {len(memory.get('seen_urls', []))} لینک\n"
         msg += f"⚡ وضعیت: <b>آنلاین ✅</b>"
@@ -53,8 +53,10 @@ try:
         if any(k in title for k in keywords) and 'remote' in job.get('location', '').lower():
             if job_url not in memory['seen_urls']:
                 score = 70
-                if 'senior' in title or 'lead' in title: score += 15
-                if 'ai' in title or 'machine learning' in title: score += 10
+                if 'senior' in title or 'lead' in title:
+                    score += 15
+                if 'ai' in title or 'machine learning' in title:
+                    score += 10
                 all_new_jobs.append({'title': job.get('title'), 'company': job.get('company_name', 'Unknown'), 'url': job_url, 'score': min(score, 99), 'perks': ''})
     print("✅ منبع اول تکمیل شد")
 except Exception as e:
@@ -70,8 +72,10 @@ try:
         if any(k in title for k in keywords):
             if job_url not in memory['seen_urls']:
                 score = 70
-                if 'senior' in title or 'lead' in title: score += 15
-                if 'ai' in title or 'machine learning' in title: score += 10
+                if 'senior' in title or 'lead' in title:
+                    score += 15
+                if 'ai' in title or 'machine learning' in title:
+                    score += 10
                 salary = job.get('salary', '')
                 perks = f"💰 {salary}" if salary else "💼 دورکاری"
                 all_new_jobs.append({'title': job.get('title'), 'company': job.get('company_name', 'Unknown'), 'url': job_url, 'score': min(score, 99), 'perks': perks})
@@ -79,16 +83,21 @@ try:
 except Exception as e:
     print(f"⚠️ خطا در منبع دوم: {e}")
 
-if all_new_jobs:
+if len(all_new_jobs) > 0:
     all_new_jobs.sort(key=lambda x: x['score'], reverse=True)
     msg = "💰 <b>شکارهای هوشمند از ۲ جبهه:</b>\n\n"
     for i, job in enumerate(all_new_jobs[:4], 1):
         emoji = "🚨" if job['score'] >= 90 else "🔥" if job['score'] >= 80 else "✅"
         msg += f"{i}. {emoji} <b>{job['title']}</b> (امتیاز: {job['score']}٪)\n"
         msg += f"   🏢 {job['company']}\n"
-        if job.get('perks'): msg += f"   🎁 {job['perks']}\n"
-        msg += f"   🔗 <a href='{job['url']}'>مشاهده</a>\n\n"if i == 1 and job['score'] >= 80:
-            msg += f"📝 <b>پیشنهاد آماده:</b>\n<i>سلام تیم {job['company']}،\nمن متخصص {job['title']} هستم. آمادگی دارم راه‌حل بهینه ارائه دهم.</i>\n\n━━━━━━━━━━━━━━━━━━━━\n\n"
+        perks_text = job.get('perks', '')
+        if perks_text != '':
+            msg += f"   🎁 {perks_text}\n"
+        msg += f"   🔗 <a href='{job['url']}'>مشاهده</a>\n\n"
+        if i == 1 and job['score'] >= 80:
+            msg += f"📝 <b>پیشنهاد آماده:</b>\n"
+            msg += f"<i>سلام تیم {job['company']}،\nمن متخصص {job['title']} هستم. آمادگی دارم راه‌حل بهینه ارائه دهم.</i>\n\n"
+            msg += "━━━━━━━━━━━━━━━━━━━━\n\n"
     send_message(msg)
     print(f"✅ {len(all_new_jobs)} پروژه ارسال شد.")
     for job in all_new_jobs:
