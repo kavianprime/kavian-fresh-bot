@@ -14,7 +14,11 @@ def load_memory():
                 return json.load(f)
         except:
             pass
-    return {'seen_urls': [], 'total_seen': 0}
+    return {
+        'seen_urls': [], 
+        'total_seen': 0,
+        'keywords': ['python', 'ai', 'bot', 'developer', 'engineer']
+    }
 
 def save_memory(memory):
     with open(MEMORY_FILE, 'w', encoding='utf-8') as f:
@@ -35,28 +39,52 @@ def send_message(text, parse_mode='HTML'):
     api_url = f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage"
     requests.post(api_url, json={'chat_id': CHAT_ID, 'text': text, 'parse_mode': parse_mode})
 
+# مدیریت دستورات هوشمند
 if len(sys.argv) > 1:
     command = sys.argv[1]
+    memory = load_memory()
+    
     if command == '/start':
-        send_message("🦁 <b>سلام رهبر کاویان!</b>\nمن KAVIAN PRIME هستم.\n\nدستورات:\n/status : گزارش وضعیت")
+        msg = "🦁 <b>سلام رهبر کاویان!</b>\nمن KAVIAN PRIME هستم.\n\n"
+        msg += "دستورات:\n"
+        msg += "/status : گزارش وضعیت\n"
+        msg += "/keywords : نمایش کلمات کلیدی فعلی\n"
+        msg += "/add [کلمه] : افزودن کلمه جدید به شکار (مثال: /add rust)"
+        send_message(msg)
         sys.exit()
+        
     elif command == '/status':
-        memory = load_memory()
         msg = "📊 <b>گزارش وضعیت:</b>\n\n"
         msg += f"🧠 کل پروژه‌ها: {memory.get('total_seen', 0)}\n"
         msg += f"💾 حافظه: {len(memory.get('seen_urls', []))} لینک\n"
         msg += f"⚡ وضعیت: <b>آنلاین ✅</b>"
         send_message(msg)
         sys.exit()
+        
+    elif command == '/keywords':
+        kws = memory.get('keywords', [])
+        kws_text = "، ".join([f"<code>{k}</code>" for k in kws])
+        send_message(f"🔑 <b>کلمات کلیدی فعال:</b>\n\n{kws_text}\n\nبرای افزودن کلمه جدید از دستور <code>/add [کلمه]</code> استفاده کن.")
+        sys.exit()
+        
+    elif command.startswith('/add '):
+        new_kw = command.split(' ', 1)[1].strip().lower()
+        if new_kw and new_kw not in memory.get('keywords', []):
+            memory['keywords'].append(new_kw)
+            save_memory(memory)
+            send_message(f"✅ کلمه‌ی <b>{new_kw}</b> با موفقیت به لیست شکار اضافه شد!\nاز دفعه‌ی بعد ربات این کلمه را هم جستجو می‌کند.")
+        else:
+            send_message("⚠️ این کلمه از قبل در لیست وجود دارد یا نامعتبر است.")
+        sys.exit()
 
-print("🦁 شکارچی چندجبهه‌ای با دکمه‌های تعاملی بیدار شد!")
+print("🦁 شکارچی هوشمند و یادگیرنده بیدار شد!")
 memory = load_memory()
 all_new_jobs = []
-keywords = ['python', 'ai', 'bot', 'developer', 'engineer']
+keywords = memory.get('keywords', ['python', 'ai', 'bot', 'developer', 'engineer'])
 
 try:
     print("اسکن منبع اول...")
-    response1 = requests.get("https://www.arbeitnow.com/api/job-board-api", headers={'User-Agent': 'KavianPrimeBot/6.0'}, timeout=15)
+    response1 = requests.get("https://www.arbeitnow.com/api/job-board-api", headers={'User-Agent': 'KavianPrimeBot/7.0'}, timeout=15)
     data1 = response1.json().get('data', [])
     for job in data1:
         title = job.get('title', '').lower()
@@ -70,10 +98,9 @@ try:
     print("✅ منبع اول تکمیل شد")
 except Exception as e:
     print(f"⚠️ خطا در منبع اول: {e}")
-
-try:
+    try:
     print("اسکن منبع دوم...")
-    response2 = requests.get("https://remotive.com/api/remote-jobs", headers={'User-Agent': 'KavianPrimeBot/6.0'}, timeout=15)
+    response2 = requests.get("https://remotive.com/api/remote-jobs", headers={'User-Agent': 'KavianPrimeBot/7.0'}, timeout=15)
     data2 = response2.json().get('jobs', [])
     for job in data2:
         title = job.get('title', '').lower()
@@ -92,6 +119,7 @@ except Exception as e:
 
 if len(all_new_jobs) > 0:
     all_new_jobs.sort(key=lambda x: x['score'], reverse=True)
+    
     for i, job in enumerate(all_new_jobs[:4], 1):
         emoji = "🚨" if job['score'] >= 90 else "🔥" if job['score'] >= 80 else "✅"
         msg = f"{i}. {emoji} <b>{job['title']}</b> (امتیاز: {job['score']}٪)\n"
@@ -105,7 +133,6 @@ if len(all_new_jobs) > 0:
             msg += f"<i>سلام تیم {job['company']}،\nمن متخصص {job['title']} هستم. آمادگی دارم راه‌حلی بهینه و با کیفیت بالا ارائه دهم.</i>\n"
             msg += "━━━━━━━━━━━━━━━━━━━━"
         
-        # ارسال هر شکار با دکمه‌ی اختصاصی
         send_message_with_button(msg, job['url'])
         
     print(f"✅ {len(all_new_jobs[:4])} پروژه با دکمه ارسال شد.")
