@@ -20,9 +20,20 @@ def save_memory(memory):
     with open(MEMORY_FILE, 'w', encoding='utf-8') as f:
         json.dump(memory, f, ensure_ascii=False, indent=2)
 
+def send_message_with_button(text, url, parse_mode='HTML'):
+    api_url = f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage"
+    keyboard = {"inline_keyboard": [[{"text": "🔗 مشاهده و اقدام سریع", "url": url}]]}
+    payload = {
+        'chat_id': CHAT_ID,
+        'text': text,
+        'parse_mode': parse_mode,
+        'reply_markup': json.dumps(keyboard)
+    }
+    requests.post(api_url, json=payload)
+
 def send_message(text, parse_mode='HTML'):
-    url = f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage"
-    requests.post(url, json={'chat_id': CHAT_ID, 'text': text, 'parse_mode': parse_mode})
+    api_url = f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage"
+    requests.post(api_url, json={'chat_id': CHAT_ID, 'text': text, 'parse_mode': parse_mode})
 
 if len(sys.argv) > 1:
     command = sys.argv[1]
@@ -38,14 +49,14 @@ if len(sys.argv) > 1:
         send_message(msg)
         sys.exit()
 
-print("🦁 شکارچی چندجبهه‌ای بیدار شد!")
+print("🦁 شکارچی چندجبهه‌ای با دکمه‌های تعاملی بیدار شد!")
 memory = load_memory()
 all_new_jobs = []
 keywords = ['python', 'ai', 'bot', 'developer', 'engineer']
 
 try:
     print("اسکن منبع اول...")
-    response1 = requests.get("https://www.arbeitnow.com/api/job-board-api", headers={'User-Agent': 'KavianPrimeBot/5.0'}, timeout=15)
+    response1 = requests.get("https://www.arbeitnow.com/api/job-board-api", headers={'User-Agent': 'KavianPrimeBot/6.0'}, timeout=15)
     data1 = response1.json().get('data', [])
     for job in data1:
         title = job.get('title', '').lower()
@@ -53,10 +64,8 @@ try:
         if any(k in title for k in keywords) and 'remote' in job.get('location', '').lower():
             if job_url not in memory['seen_urls']:
                 score = 70
-                if 'senior' in title or 'lead' in title:
-                    score += 15
-                if 'ai' in title or 'machine learning' in title:
-                    score += 10
+                if 'senior' in title or 'lead' in title: score += 15
+                if 'ai' in title or 'machine learning' in title: score += 10
                 all_new_jobs.append({'title': job.get('title'), 'company': job.get('company_name', 'Unknown'), 'url': job_url, 'score': min(score, 99), 'perks': ''})
     print("✅ منبع اول تکمیل شد")
 except Exception as e:
@@ -64,7 +73,7 @@ except Exception as e:
 
 try:
     print("اسکن منبع دوم...")
-    response2 = requests.get("https://remotive.com/api/remote-jobs", headers={'User-Agent': 'KavianPrimeBot/5.0'}, timeout=15)
+    response2 = requests.get("https://remotive.com/api/remote-jobs", headers={'User-Agent': 'KavianPrimeBot/6.0'}, timeout=15)
     data2 = response2.json().get('jobs', [])
     for job in data2:
         title = job.get('title', '').lower()
@@ -72,10 +81,8 @@ try:
         if any(k in title for k in keywords):
             if job_url not in memory['seen_urls']:
                 score = 70
-                if 'senior' in title or 'lead' in title:
-                    score += 15
-                if 'ai' in title or 'machine learning' in title:
-                    score += 10
+                if 'senior' in title or 'lead' in title: score += 15
+                if 'ai' in title or 'machine learning' in title: score += 10
                 salary = job.get('salary', '')
                 perks = f"💰 {salary}" if salary else "💼 دورکاری"
                 all_new_jobs.append({'title': job.get('title'), 'company': job.get('company_name', 'Unknown'), 'url': job_url, 'score': min(score, 99), 'perks': perks})
@@ -85,25 +92,27 @@ except Exception as e:
 
 if len(all_new_jobs) > 0:
     all_new_jobs.sort(key=lambda x: x['score'], reverse=True)
-    msg = "💰 <b>شکارهای هوشمند از ۲ جبهه:</b>\n\n"
     for i, job in enumerate(all_new_jobs[:4], 1):
         emoji = "🚨" if job['score'] >= 90 else "🔥" if job['score'] >= 80 else "✅"
-        msg += f"{i}. {emoji} <b>{job['title']}</b> (امتیاز: {job['score']}٪)\n"
+        msg = f"{i}. {emoji} <b>{job['title']}</b> (امتیاز: {job['score']}٪)\n"
         msg += f"   🏢 {job['company']}\n"
         perks_text = job.get('perks', '')
         if perks_text != '':
             msg += f"   🎁 {perks_text}\n"
-        msg += f"   🔗 <a href='{job['url']}'>مشاهده</a>\n\n"
+        
         if i == 1 and job['score'] >= 80:
-            msg += f"📝 <b>پیشنهاد آماده:</b>\n"
-            msg += f"<i>سلام تیم {job['company']}،\nمن متخصص {job['title']} هستم. آمادگی دارم راه‌حل بهینه ارائه دهم.</i>\n\n"
-            msg += "━━━━━━━━━━━━━━━━━━━━\n\n"
-    send_message(msg)
-    print(f"✅ {len(all_new_jobs)} پروژه ارسال شد.")
+            msg += f"\n📝 <b>پیشنهاد آماده‌ی ارسال:</b>\n"
+            msg += f"<i>سلام تیم {job['company']}،\nمن متخصص {job['title']} هستم. آمادگی دارم راه‌حلی بهینه و با کیفیت بالا ارائه دهم.</i>\n"
+            msg += "━━━━━━━━━━━━━━━━━━━━"
+        
+        # ارسال هر شکار با دکمه‌ی اختصاصی
+        send_message_with_button(msg, job['url'])
+        
+    print(f"✅ {len(all_new_jobs[:4])} پروژه با دکمه ارسال شد.")
     for job in all_new_jobs:
         memory['seen_urls'].append(job['url'])
     memory['total_seen'] = memory.get('total_seen', 0) + len(all_new_jobs)
     save_memory(memory)
 else:
     print("⏸️ پروژه جدیدی نیست.")
-    send_message("🧠 <b>گزارش:</b>\nامروز شکار جدیدی یافت نشد. ✅")
+    send_message("🧠 <b>گزارش:</b>\nامروز شکار جدیدی یافت نشد. ربات در حال اسکن مداوم است. ✅")
