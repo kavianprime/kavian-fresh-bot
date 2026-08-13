@@ -30,7 +30,7 @@ if len(sys.argv) > 1:
     memory = load_memory()
     
     if command == '/start':
-        send_message("🦁 <b>سلام رهبر کاویان!</b>\nدستورات:\n/find [عبارت]\n/track : لیست درخواست‌ها\n/applied [شماره]\n/hired [شماره]")
+        send_message("🦁 <b>سلام رهبر کاویان!</b>\nدستورات:\n/find [عبارت]\n/track : لیست درخواست‌ها\n/export : دانلود فایل اکسل\n/applied [شماره]\n/hired [شماره]")
         sys.exit()
     
     elif command == '/track':
@@ -39,9 +39,27 @@ if len(sys.argv) > 1:
             send_message("📋 لیست خالی است.")
             sys.exit()
         report = "📋 <b>درخواست‌های شما:</b>\n"
-        for i, app in enumerate(apps[-5:], 1):
+        for i, app in enumerate(apps[-10:], 1):
             report += f"{i}. {app['title']} - {app['status']}\n"
         send_message(report)
+        sys.exit()
+    
+    elif command == '/export':
+        apps = memory.get('applications', [])
+        if not apps:
+            send_message("📋 لیست خالی است، چیزی برای خروجی گرفتن نیست.")
+            sys.exit()
+        
+        csv_content = "Title,Company,Date,Status,URL\n"
+        for app in apps:
+            csv_content += f'"{app["title"]}","{app["company"]}","{app["date"]}","{app["status"]}","{app["url"]}"\n'
+        
+        with open('applications.csv', 'w', encoding='utf-8') as f:
+            f.write(csv_content)
+        
+        api_url = f"https://api.telegram.org/bot{BOT_TOKEN}/sendDocument"
+        with open('applications.csv', 'rb') as f:
+            requests.post(api_url, files={'document': f}, data={'chat_id': CHAT_ID, 'caption': '📊 <b>گزارش اکسل درخواست‌های شما</b>\nاین فایل را دانلود و در کامپیوتر باز کنید.'})
         sys.exit()
     
     elif command.startswith('/applied '):
@@ -80,8 +98,7 @@ if len(sys.argv) > 1:
             r1 = requests.get("https://www.arbeitnow.com/api/job-board-api", timeout=15)
             for job in r1.json().get('data', []):
                 title = job.get('title', '').lower()
-                if any(k in title for k in search_terms) and 'remote' in job.get('location', '').lower():
-                    all_new_jobs.append({'title': job.get('title'), 'company': job.get('company_name'), 'url': job.get('url')})
+                if any(k in title for k in search_terms) and 'remote' in job.get('location', '').lower():all_new_jobs.append({'title': job.get('title'), 'company': job.get('company_name'), 'url': job.get('url')})
         except:
             pass
         
@@ -99,11 +116,12 @@ if len(sys.argv) > 1:
             send_message("❌ موردی یافت نشد.")
         sys.exit()
 
-print("🦁 شکارچی و منشی پیگیر بیدار شد!")
+print("🦁 شکارچی با قابلیت خروجی اکسل بیدار شد!")
 memory = load_memory()
 all_new_jobs = []
 keywords = memory.get('keywords', ['python', 'ai', 'bot', 'developer', 'engineer'])
-# بخش جدید: بررسی یادآورهای پیگیری (Follow-up Reminders)
+
+# بررسی یادآورهای پیگیری
 apps = memory.get('applications', [])
 today_date = datetime.now().date()
 for app in apps:
@@ -120,7 +138,7 @@ for app in apps:
         except:
             pass
 
-# بخش شکار روزانه
+# شکار روزانه
 try:
     r1 = requests.get("https://www.arbeitnow.com/api/job-board-api", timeout=15)
     for job in r1.json().get('data', []):
