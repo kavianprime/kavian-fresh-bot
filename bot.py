@@ -43,7 +43,6 @@ memory = load_memory()
 all_new_jobs = []
 keywords = ['python', 'ai', 'bot', 'developer', 'engineer']
 
-# منبع اول: Arbeitnow
 try:
     print("اسکن منبع اول: Arbeitnow...")
     response1 = requests.get("https://www.arbeitnow.com/api/job-board-api", headers={'User-Agent': 'KavianPrimeBot/5.0'}, timeout=15)
@@ -71,7 +70,6 @@ try:
 except Exception as e:
     print(f"⚠️ خطا در منبع اول: {e}")
 
-# منبع دوم: Remotive
 try:
     print("اسکن منبع دوم: Remotive...")
     response2 = requests.get("https://remotive.com/api/remote-jobs", headers={'User-Agent': 'KavianPrimeBot/5.0'}, timeout=15)
