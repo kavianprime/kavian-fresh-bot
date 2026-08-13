@@ -53,8 +53,10 @@ try:
         if any(k in title for k in keywords) and 'remote' in job.get('location', '').lower():
             if job_url not in memory['seen_urls']:
                 score = 70
-                if 'senior' in title or 'lead' in title: score += 15
-                if 'ai' in title or 'machine learning' in title: score += 10
+                if 'senior' in title or 'lead' in title:
+                    score += 15
+                if 'ai' in title or 'machine learning' in title:
+                    score += 10
                 all_new_jobs.append({'title': job.get('title'), 'company': job.get('company_name', 'Unknown'), 'url': job_url, 'score': min(score, 99)})
 except Exception as e:
     print(f"خطا در منبع اول: {e}")
@@ -69,8 +71,10 @@ try:
         if any(k in title for k in keywords):
             if job_url not in memory['seen_urls']:
                 score = 70
-                if 'senior' in title or 'lead' in title: score += 15
-                if 'ai' in title or 'machine learning' in title: score += 10
+                if 'senior' in title or 'lead' in title:
+                    score += 15
+                if 'ai' in title or 'machine learning' in title:
+                    score += 10
                 all_new_jobs.append({'title': job.get('title'), 'company': job.get('company_name', 'Unknown'), 'url': job_url, 'score': min(score, 99)})
 except Exception as e:
     print(f"خطا در منبع دوم: {e}")
@@ -86,10 +90,10 @@ if all_new_jobs:
         
         if i == 1 and job['score'] >= 80:
             msg += f"📝 <b>پیشنهاد آماده:</b>\n"
-            msg += f"<i>سلام تیم {job['company']}،\nمن متخصص {job['title']} هستم. آمادگی دارم راه‌حل بهینه ارائه دهم.</i>\n\n"
-            msg += "━━━━━━━━━━━━━━━━━━━━\n\n"
+            msg += f"<i>سلام تیم {job['company']}،\nمن متخصص {job['title']} هستم. آمادگی دارم راه‌حل بهینه ارائه دهم.</i>\n\n"msg += "━━━━━━━━━━━━━━━━━━━━\n\n"
     
-    send_message(msg)print(f"✅ {len(all_new_jobs)} پروژه از ۲ منبع ارسال شد.")
+    send_message(msg)
+    print(f"✅ {len(all_new_jobs)} پروژه از ۲ منبع ارسال شد.")
     
     for job in all_new_jobs:
         memory['seen_urls'].append(job['url'])
