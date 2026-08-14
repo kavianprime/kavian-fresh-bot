@@ -16,13 +16,13 @@ def load_memory():
         except:
             pass
     return {
-        'seen_urls': [], 
-        'total_seen': 0, 
+        'seen_urls': [], 'total_seen': 0, 
         'keywords': ['python', 'ai', 'bot', 'developer', 'engineer'], 
         'rejected_keywords': ['intern', 'junior'], 
-        'applications': [],
-        'golden_keywords': [],
-        'blacklisted_keywords': []
+        'applications': [], 
+        'golden_keywords': [], 
+        'blacklisted_keywords': [],
+        'knowledge_base': [] # حافظه‌ی جدید برای یادگیری
     }
 
 def save_memory(memory):
@@ -33,10 +33,35 @@ def send_message(text):
     api_url = f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage"
     requests.post(api_url, json={'chat_id': CHAT_ID, 'text': text, 'parse_mode': 'HTML'})
 
-def generate_pitch(title, company, golden):
-    tech = ", ".join(golden[:3]) if golden else "تکنولوژی‌های پیشرفته"
-    pitch = f"تیم محترم {company}،\n\nبا سلام،\nآگهی '{title}' توجه من را جلب کرد. تخصص من در {tech} دقیقاً با نیازهای شما همخوانی دارد. آمادگی دارم در جلسه‌ای کوتاه، ایده‌هایم را ارائه دهم.\n\nبا سپاس."
-    return pitch
+def learn_from_wikipedia(topic):
+    try:
+        # ۱. جستجو در ویکی‌پدیا انگلیسی
+        search_url = f"https://en.wikipedia.org/w/api.php?action=query&list=search&srsearch={topic}&format=json&srlimit=1"
+        response = requests.get(search_url, timeout=10)
+        results = response.json().get('query', {}).get('search', [])
+        
+        if not results:
+            return f"❌ موضوع '{topic}' در ویکی‌پدیا پیدا نشد."
+        
+        title = results[0]['title']
+        
+        # ۲. دریافت خلاصه مقاله
+        summary_url = f"https://en.wikipedia.org/api/rest_v1/page/summary/{title}"
+        resp_summary = requests.get(summary_url, timeout=10)
+        summary = resp_summary.json().get('extract', 'خلاصه‌ای یافت نشد.')
+        
+        # ۳. ذخیره در حافظه‌ی دانش ربات
+        memory = load_memory()
+        memory.setdefault('knowledge_base', []).append({
+            'topic': topic,
+            'title': title,
+            'summary': summary[:400] + "..." # کوتاه برای تلگرام
+        })
+        save_memory(memory)
+        
+        return f"🧠 <b>یادگیری موفق!</b>\n\n📚 <b>موضوع:</b> {title}\n💡 <b>خلاصه:</b>\n<i>{summary[:400]}...</i>\n\n✅ این دانش در حافظه‌ی KAVIAN GENESIS ذخیره شد."
+    except Exception as e:
+        return f"⚠️ خطا در یادگیری: {str(e)}"
 
 if len(sys.argv) > 1:
     command = sys.argv[1]
@@ -44,7 +69,15 @@ if len(sys.argv) > 1:
     apps = memory.get('applications', [])
     
     if command == '/start':
-        msg = "🦁 <b>سلام رهبر کاویان!</b>\nدستورات:\n/find [عبارت]\n/track\n/stats\n/export\n/interview [شماره]\n/hired [شماره]\n/rejected [شماره]"
+        msg = "🦁 <b>سلام رهبر کاویان!</b>\nمن KAVIAN GENESIS هستم.\n\n"
+        msg += "🔍 <b>شکار و مدیریت:</b>\n"
+        msg += "/find [عبارت] : جستجو و ثبت پروژه\n"
+        msg += "/track : لیست درخواست‌ها\n"
+        msg += "/stats : 🧠 تحلیل هوشمند و DNA\n"
+        msg += "/learn [موضوع] : 🌐 یادگیری خودکار از ویکی‌پدیا\n"
+        msg += "/export : دانلود فایل اکسل\n\n"
+        msg += "⚙️ <b>مدیریت وضعیت:</b>\n"
+        msg += "/interview [شماره]\n/hired [شماره]\n/rejected [شماره]"
         send_message(msg)
         sys.exit()
     
@@ -59,29 +92,35 @@ if len(sys.argv) > 1:
         sys.exit()
     
     elif command == '/stats':
-        if not apps:
-            send_message("📊 داده‌ای نیست.")
+        if not apps and not memory.get('knowledge_base'):
+            send_message("📊 هنوز داده‌ای نیست. با /find یا /learn شروع کن!")
             sys.exit()
+        
         total = len(apps)
-        applied = len([a for a in apps if a['status'] == 'applied'])
-        interview = len([a for a in apps if a['status'] == 'interview'])
-        rejected = len([a for a in apps if a['status'] == 'rejected'])
         hired = len([a for a in apps if a['status'] == 'hired'])
-        success = interview + hired
-        rate = round((success / total) * 100, 1) if total > 0 else 0
+        rate = round((hired / total) * 100, 1) if total > 0 else 0
         
         report = f"🧠 <b>داشبورد KAVIAN GENESIS</b>\n"
-        report += f"🎯 کل: {total}\n📤 ارسال: {applied}\n🎤 مصاحبه: {interview}\n❌ رد: {rejected}\n🎉 استخدام: {hired}\n📈 نرخ موفقیت: {rate}٪\n"
+        report += f"🎯 کل درخواست‌ها: {total} | 🎉 استخدام: {hired} | 📈 نرخ موفقیت: {rate}٪\n"
+        kb = memory.get('knowledge_base', [])
+        if kb:
+            report += f"\n📚 <b>دانش ذخیره‌شده:</b> {len(kb)} موضوع یاد گرفته شده."
         
         golden = memory.get('golden_keywords', [])
         blacklisted = memory.get('blacklisted_keywords', [])
-        if golden:
-            report += f"\n🧬 DNA مثبت: {', '.join(golden)}\n"
-        if blacklisted:
-            report += f"\n🛡️ DNA منفی: {', '.join(blacklisted)}\n"
+        if golden: report += f"\n🧬 DNA مثبت: {', '.join(golden)}"
+        if blacklisted: report += f"\n🛡️ DNA منفی: {', '.join(blacklisted)}"
+        
         send_message(report)
         sys.exit()
-    
+        
+    elif command.startswith('/learn '):
+        topic = command.split(' ', 1)[1].strip()
+        send_message(f"⏳ در حال جستجو و یادگیری درباره‌ی '{topic}' از ویکی‌پدیا...")
+        result = learn_from_wikipedia(topic)
+        send_message(result)
+        sys.exit()
+
     elif command == '/export':
         if not apps:
             send_message("📋 لیست خالی است.")
@@ -99,21 +138,18 @@ if len(sys.argv) > 1:
     elif command.startswith('/interview '):
         try:
             num = int(command.split(' ')[1]) - 1
-          if 0 <= num < len(apps):
+            if 0 <= num < len(apps):
                 apps[num]['status'] = 'interview'
                 memory['applications'] = apps
                 title = apps[num]['title'].lower()
                 tech = ['python', 'ai', 'react', 'node', 'aws', 'docker', 'crypto', 'web3', 'bot', 'api', 'data', 'ml', 'llm', 'gpt', 'rust', 'go', 'java']
                 learned = [t for t in tech if t in title and t not in memory.get('golden_keywords', [])]
-                if learned:
-                    memory.setdefault('golden_keywords', []).extend(learned)
+                if learned: memory.setdefault('golden_keywords', []).extend(learned)
                 save_memory(memory)
-                msg = f"🎤 {apps[num]['title']}\n"
-                if learned:
-                    msg += f"\n🧬 DNA مثبت: {', '.join(learned)}"
+                msg = f"🎤 {apps[num]['title']}"
+                if learned: msg += f"\n🧬 DNA مثبت: {', '.join(learned)}"
                 send_message(msg)
-        except:
-            send_message("⚠️ /interview 1")
+        except: send_message("⚠️ /interview 1")
         sys.exit()
     
     elif command.startswith('/hired '):
@@ -125,15 +161,12 @@ if len(sys.argv) > 1:
                 title = apps[num]['title'].lower()
                 tech = ['python', 'ai', 'react', 'node', 'aws', 'docker', 'crypto', 'web3', 'bot', 'api', 'data', 'ml', 'llm', 'gpt', 'rust', 'go', 'java']
                 learned = [t for t in tech if t in title and t not in memory.get('golden_keywords', [])]
-                if learned:
-                    memory.setdefault('golden_keywords', []).extend(learned)
+                if learned: memory.setdefault('golden_keywords', []).extend(learned)
                 save_memory(memory)
-                msg = f"🎉 {apps[num]['title']}\n"
-                if learned:
-                    msg += f"\n🧬 DNA مثبت: {', '.join(learned)}"
+                msg = f"🎉 {apps[num]['title']}"
+                if learned: msg += f"\n🧬 DNA مثبت: {', '.join(learned)}"
                 send_message(msg)
-        except:
-            send_message("⚠️ /hired 1")
+        except: send_message("⚠️ /hired 1")
         sys.exit()
     
     elif command.startswith('/rejected '):
@@ -145,15 +178,12 @@ if len(sys.argv) > 1:
                 title = apps[num]['title'].lower()
                 bad = ['intern', 'junior', 'unpaid', 'volunteer', 'commission', 'trainee', 'entry-level', 'part-time']
                 learned_bad = [b for b in bad if b in title and b not in memory.get('blacklisted_keywords', [])]
-                if learned_bad:
-                    memory.setdefault('blacklisted_keywords', []).extend(learned_bad)
+                if learned_bad: memory.setdefault('blacklisted_keywords', []).extend(learned_bad)
                 save_memory(memory)
-                msg = f"❌ {apps[num]['title']}\n"
-                if learned_bad:
-                    msg += f"\n🛡️ DNA منفی: {', '.join(learned_bad)}"
+                msg = f"❌ {apps[num]['title']}"
+                if learned_bad: msg += f"\n🛡️ DNA منفی: {', '.join(learned_bad)}"
                 send_message(msg)
-        except:
-            send_message("⚠️ /rejected 1")
+        except: send_message("⚠️ /rejected 1")
         sys.exit()
     
     elif command.startswith('/find '):
@@ -166,8 +196,7 @@ if len(sys.argv) > 1:
                 title = job.get('title', '').lower()
                 if any(k in title for k in search_terms) and 'remote' in job.get('location', '').lower():
                     all_new_jobs.append({'title': job.get('title'), 'company': job.get('company_name'), 'url': job.get('url')})
-        except:
-            pass
+        except: pass
         
         if len(all_new_jobs) > 0:
             job = all_new_jobs[0]
@@ -175,53 +204,9 @@ if len(sys.argv) > 1:
             apps.append({'title': job['title'], 'company': job['company'], 'url': job['url'], 'date': today, 'status': 'applied'})
             memory['applications'] = apps
             save_memory(memory)
-            
-            golden = memory.get('golden_keywords', [])
-            pitch = generate_pitch(job['title'], job['company'], golden)
-          report = f"💎 <b>{job['title']}</b>\n🏢 {job['company']}\n🔗 <a href='{job['url']}'>مشاهده</a>\n\n"
-            report += f"🎨 <b>پیشنهاد آماده:</b>\n<i>{pitch}</i>\n\n"
-            report += "✅ به لیست اضافه شد."
-            send_message(report)
+            send_message(f"💎 <b>{job['title']}</b>\n🏢 {job['company']}\n🔗 <a href='{job['url']}'>مشاهده</a>\n✅ به لیست اضافه شد.")
         else:
             send_message("❌ یافت نشد.")
         sys.exit()
 
-print("🦁 KAVIAN GENESIS: روز ۲۵ - موتور طراحی مولد بیدار شد!")
-memory = load_memory()
-all_new_jobs = []
-keywords = memory.get('keywords', ['python', 'ai', 'bot', 'developer', 'engineer'])
-golden = memory.get('golden_keywords', [])
-blacklisted = memory.get('blacklisted_keywords', []) + memory.get('rejected_keywords', [])
-
-try:
-    r1 = requests.get("https://www.arbeitnow.com/api/job-board-api", timeout=15)
-    for job in r1.json().get('data', []):
-        title = job.get('title', '').lower()
-        if any(bw in title for bw in blacklisted):
-            continue
-        if any(k in title for k in keywords) and 'remote' in job.get('location', '').lower():
-            if job.get('url') not in memory['seen_urls']:
-                score = 70
-                for gk in golden:
-                    if gk in title:
-                        score += 30
-                if 'senior' in title or 'lead' in title:
-                    score += 15
-                all_new_jobs.append({'title': job.get('title'), 'company': job.get('company_name'), 'url': job.get('url'), 'score': score})
-except:
-    pass
-
-if len(all_new_jobs) > 0:
-    all_new_jobs.sort(key=lambda x: x['score'], reverse=True)
-    job = all_new_jobs[0]
-    msg = f"💰 <b>شکار امروز:</b>\n💎 <b>{job['title']}</b> (امتیاز: {job['score']})\n🏢 {job['company']}\n🔗 <a href='{job['url']}'>مشاهده</a>\n"
-    if job['score'] >= 100:
-        pitch = generate_pitch(job['title'], job['company'], golden)
-        msg += f"\n🎨 <b>پیشنهاد:</b>\n<i>{pitch}</i>\n\n🧬 <b>هشدار DNA:</b> الگوهای طلایی!"
-    send_message(msg)
-    for j in all_new_jobs:
-        memory['seen_urls'].append(j['url'])
-    memory['total_seen'] = memory.get('total_seen', 0) + len(all_new_jobs)
-    save_memory(memory)
-else:
-    send_message("⏸️ پروژه جدیدی نیست.")
+print("🦁 KAVIAN GENESIS: روز ۲۳ - موتور یادگیری ویکی‌پدیا بیدار شد!")
