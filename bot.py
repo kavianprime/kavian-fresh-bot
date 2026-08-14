@@ -184,4 +184,27 @@ if len(sys.argv) > 1:
         else:
             send_message("❌ موردی با این مشخصات یافت نشد.")
         sys.exit()
-        
+        print("🦁 KAVIAN GENESIS: روز ۲۲ - مغز تحلیل‌گر بیدار شد!")
+memory = load_memory()
+all_new_jobs = []
+keywords = memory.get('keywords', ['python', 'ai', 'bot', 'developer', 'engineer'])
+
+try:
+    r1 = requests.get("https://www.arbeitnow.com/api/job-board-api", timeout=15)
+    for job in r1.json().get('data', []):
+        title = job.get('title', '').lower()
+        if any(k in title for k in keywords) and 'remote' in job.get('location', '').lower():
+            if job.get('url') not in memory['seen_urls']:
+                all_new_jobs.append({'title': job.get('title'), 'company': job.get('company_name'), 'url': job.get('url')})
+except:
+    pass
+
+if len(all_new_jobs) > 0:
+    job = all_new_jobs[0]
+    send_message(f"💰 <b>شکار خودکار امروز:</b>\n💎 <b>{job['title']}</b>\n🏢 {job['company']}\n🔗 <a href='{job['url']}'>مشاهده</a>")
+    for j in all_new_jobs:
+        memory['seen_urls'].append(j['url'])
+    memory['total_seen'] = memory.get('total_seen', 0) + len(all_new_jobs)
+    save_memory(memory)
+else:
+    send_message("⏸️ پروژه جدیدی نیست. سیستم در حال اسکن مداوم است.")
