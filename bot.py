@@ -22,7 +22,7 @@ def load_memory():
         'applications': [], 
         'golden_keywords': [], 
         'blacklisted_keywords': [],
-        'knowledge_base': [] # حافظه‌ی جدید برای یادگیری
+        'knowledge_base': []
     }
 
 def save_memory(memory):
@@ -35,7 +35,6 @@ def send_message(text):
 
 def learn_from_wikipedia(topic):
     try:
-        # ۱. جستجو در ویکی‌پدیا انگلیسی
         search_url = f"https://en.wikipedia.org/w/api.php?action=query&list=search&srsearch={topic}&format=json&srlimit=1"
         response = requests.get(search_url, timeout=10)
         results = response.json().get('query', {}).get('search', [])
@@ -44,18 +43,15 @@ def learn_from_wikipedia(topic):
             return f"❌ موضوع '{topic}' در ویکی‌پدیا پیدا نشد."
         
         title = results[0]['title']
-        
-        # ۲. دریافت خلاصه مقاله
         summary_url = f"https://en.wikipedia.org/api/rest_v1/page/summary/{title}"
         resp_summary = requests.get(summary_url, timeout=10)
         summary = resp_summary.json().get('extract', 'خلاصه‌ای یافت نشد.')
         
-        # ۳. ذخیره در حافظه‌ی دانش ربات
         memory = load_memory()
         memory.setdefault('knowledge_base', []).append({
             'topic': topic,
             'title': title,
-            'summary': summary[:400] + "..." # کوتاه برای تلگرام
+            'summary': summary[:400] + "..."
         })
         save_memory(memory)
         
@@ -74,7 +70,8 @@ if len(sys.argv) > 1:
         msg += "/find [عبارت] : جستجو و ثبت پروژه\n"
         msg += "/track : لیست درخواست‌ها\n"
         msg += "/stats : 🧠 تحلیل هوشمند و DNA\n"
-        msg += "/learn [موضوع] : 🌐 یادگیری خودکار از ویکی‌پدیا\n"
+        msg += "/learn [موضوع] : 🌐 یادگیری از ویکی‌پدیا\n"
+        msg += "/search [موضوع] : 🔎 بازیابی از حافظه دانش\n"
         msg += "/export : دانلود فایل اکسل\n\n"
         msg += "⚙️ <b>مدیریت وضعیت:</b>\n"
         msg += "/interview [شماره]\n/hired [شماره]\n/rejected [شماره]"
@@ -102,6 +99,7 @@ if len(sys.argv) > 1:
         
         report = f"🧠 <b>داشبورد KAVIAN GENESIS</b>\n"
         report += f"🎯 کل درخواست‌ها: {total} | 🎉 استخدام: {hired} | 📈 نرخ موفقیت: {rate}٪\n"
+        
         kb = memory.get('knowledge_base', [])
         if kb:
             report += f"\n📚 <b>دانش ذخیره‌شده:</b> {len(kb)} موضوع یاد گرفته شده."
@@ -119,6 +117,32 @@ if len(sys.argv) > 1:
         send_message(f"⏳ در حال جستجو و یادگیری درباره‌ی '{topic}' از ویکی‌پدیا...")
         result = learn_from_wikipedia(topic)
         send_message(result)
+        sys.exit()
+
+    elif command.startswith('/search '):
+        query = command.split(' ', 1)[1].strip().lower()
+        kb = memory.get('knowledge_base', [])
+        if not kb:
+            send_message("📚 حافظه‌ی دانش خالی است. اول با /learn چیزی یاد بگیر!")
+            sys.exit()
+        
+        found_items = []
+        for item in kb:
+            if query in item['topic'].lower() or query in item['title'].lower() or query in item['summary'].lower():
+                found_items.append(item)
+                
+        if not found_items:
+            send_message(f"🔍 چیزی درباره‌ی '{query}' در حافظه‌ام پیدا نکردم. شاید باید آن را با /learn یاد بگیرم.")
+            sys.exit()
+            
+        report = f"🧠 <b>یافته‌های حافظه درباره‌ی '{query}':</b>\n\n"
+        for i, item in enumerate(found_items[:3], 1): # نمایش حداکثر ۳ مورد برای جلوگیری از طولانی شدن پیام
+            report += f"{i}. <b>{item['title']}</b>\n<i>{item['summary']}</i>\n\n"
+            
+        if len(found_items) > 3:
+            report += f"(... و {len(found_items) - 3} مورد دیگر)"
+            
+        send_message(report)
         sys.exit()
 
     elif command == '/export':
@@ -209,4 +233,5 @@ if len(sys.argv) > 1:
             send_message("❌ یافت نشد.")
         sys.exit()
 
-print("🦁 KAVIAN GENESIS: روز ۲۳ - موتور یادگیری ویکی‌پدیا بیدار شد!")
+print("🦁 KAVIAN GENESIS: روز ۲۴ - موتور بازیابی دانش بیدار شد!")
+
