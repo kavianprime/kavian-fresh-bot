@@ -136,7 +136,7 @@ if len(sys.argv) > 1:
             sys.exit()
             
         report = f"🧠 <b>یافته‌های حافظه درباره‌ی '{query}':</b>\n\n"
-        for i, item in enumerate(found_items[:3], 1): # نمایش حداکثر ۳ مورد برای جلوگیری از طولانی شدن پیام
+        for i, item in enumerate(found_items[:3], 1):
             report += f"{i}. <b>{item['title']}</b>\n<i>{item['summary']}</i>\n\n"
             
         if len(found_items) > 3:
@@ -233,5 +233,5 @@ if len(sys.argv) > 1:
             send_message("❌ یافت نشد.")
         sys.exit()
 
-print("🦁 KAVIAN GENESIS: روز ۲۴ - موتور بازیابی دانش بیدار شد!")
+print("🦁 KAVIAN GENESIS: مرحله ۲۴ - موتور بازیابی دانش فعال شد!")
 
