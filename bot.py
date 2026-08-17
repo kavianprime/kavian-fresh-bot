@@ -1,7 +1,9 @@
-import requests
-import json
 import os
+import json
+import requests
+import threading
 from datetime import datetime
+from flask import Flask
 from telegram import Update
 from telegram.ext import Application, CommandHandler, ContextTypes
 
@@ -173,19 +175,34 @@ async def find(update: Update, context: ContextTypes.DEFAULT_TYPE):
     else:
         await update.message.reply_text("❌ یافت نشد.")
 
+# ==========================================
+# 🦁 ترفند حرفه‌ای: سرور نمایشی برای راضی کردن Render
+# ==========================================
+def run_dummy_server():
+    app = Flask(name)
+    
+    @app.route('/')
+    def home():
+        return "🦁 KAVIAN GENESIS is alive and running!"
+    
+    port = int(os.environ.get('PORT', 8080))
+    app.run(host='0.0.0.0', port=port)
+
 def main():
-    app = Application.builder().token(BOT_TOKEN).build()
-    app.add_handler(CommandHandler("start", start))
-    app.add_handler(CommandHandler("track", track))
-    app.add_handler(CommandHandler("stats", stats))
-    app.add_handler(CommandHandler("learn", learn))
-    app.add_handler(CommandHandler("search", search))
-    app.add_handler(CommandHandler("find", find))
+    # ۱. اجرای سرور نمایشی در پس‌زمینه (برای جلوگیری از خطای پورت رندر)
+    threading.Thread(target=run_dummy_server, daemon=True).start()
+    
+    # ۲. اجرای ربات تلگرام
+    app_bot = Application.builder().token(BOT_TOKEN).build()
+    app_bot.add_handler(CommandHandler("start", start))
+    app_bot.add_handler(CommandHandler("track", track))
+    app_bot.add_handler(CommandHandler("stats", stats))
+    app_bot.add_handler(CommandHandler("learn", learn))
+    app_bot.add_handler(CommandHandler("search", search))
+    app_bot.add_handler(CommandHandler("find", find))
     
     print("🦁 KAVIAN GENESIS: ربات 24/7 فعال شد!")
-    app.run_polling()
+    app_bot.run_polling()
 
 if name == 'main':
     main()
-
-
